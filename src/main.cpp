@@ -183,6 +183,15 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
                 }
                 break;
             }
+            case SDL_MOUSEWHEEL: {
+                if(ev.wheel.y != 0) {
+                    int x = 0;
+                    int y = 0;
+                    SDL_GetMouseState(&x, &y);
+                    std::cout << "Scrolling! Mouse pos: (" << x << ", " << y << ')' << std::endl;
+                }
+                break;
+            }
             case SDL_MOUSEBUTTONUP: {
                 if(ev.button.button == SDL_BUTTON_LEFT) {
                     dragging = false;
