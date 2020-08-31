@@ -82,7 +82,9 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
     constexpr int default_width = 1280;
     constexpr int default_height = 720;
 
-    /*
+    int width = default_width;
+    int height = default_height;
+
     constexpr int default_itr = 200;
     int itr = default_itr;
 
@@ -94,7 +96,9 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
 
     constexpr double default_offset_y = 0.0;
     double offset_y = default_offset_y;
-    */
+
+    double old_x = 0.0;
+    double old_y = 0.0;
 
     assert(SDL_Init(SDL_INIT_VIDEO) == 0, "Couldn't initialize SDL");
 
@@ -141,13 +145,56 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
 
     out vec4 out_color;
 
+    uniform int itr;
+    uniform float zoom;
+    uniform vec2 screen_size;
+    uniform vec2 offset;
+
+    float n = 0.0;
+    float threshold = 100.0;
+
+    float mandlebrot(vec2 c) {
+        vec2 z = vec2(0.0, 0.0);
+
+        for(int i = 0; i < itr; ++i) {
+            vec2 znew;
+            znew.x = (z.x * z.x) - (z.y * z.y) + c.x;
+            znew.y = (2.0 * z.x * z.y) + c.y;
+            z = znew;
+
+            if((z.x * z.x) + (z.y * z.y) > threshold) {
+                break;
+            }
+
+            n++;
+        }
+
+        return n / float(itr);
+    }
+
+    vec4 map_to_color(float t) {
+        float r = 9.0 * (1.0 - t) * t * t * t;
+        float g = 15.0 * (1.0 - t) * (1.0 - t) * t * t;
+        float b = 8.5 * (1.0 - t) * (1.0 - t) * (1.0 - t) * t;
+
+        return vec4(r, g, b, 1.0);
+    }
+
     void main() {
-        out_color = vec4(1.0, 0.5, 0.7, 1.0);
+        vec2 coord = gl_FragCoord.xy;
+        float t = mandlebrot(((coord - screen_size / 2) / zoom) - offset);
+
+        out_color = map_to_color(t);
     }
     )";
 
     auto const shader = create_program(desc);
     glUseProgram(shader);
+
+    glUniform2f(glGetUniformLocation(shader, "screen_size"), default_width, default_height);
+    glUniform2f(glGetUniformLocation(shader, "offset"), offset_x, offset_y);
+    glUniform1f(glGetUniformLocation(shader, "zoom"), zoom);
+    glUniform1i(glGetUniformLocation(shader, "itr"), itr);
 
     unsigned int vao = 0;
     glGenVertexArrays(1, &vao);
@@ -170,25 +217,30 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
     while(running) {
         SDL_Event ev;
         while(static_cast<bool>(SDL_PollEvent(&ev))) {
+            constexpr int itr_adder = 50;
+            constexpr int itr_threshold = 100;
+
             switch(ev.type) {
             case SDL_WINDOWEVENT: {
                 if(ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                     glViewport(0, 0, ev.window.data1, ev.window.data2);
+                    width = ev.window.data1;
+                    height = ev.window.data2;
+                    glUniform2f(glGetUniformLocation(shader, "screen_size"),
+                                static_cast<float>(width),
+                                static_cast<float>(height));
                 }
                 break;
             }
             case SDL_MOUSEBUTTONDOWN: {
                 if(ev.button.button == SDL_BUTTON_LEFT) {
-                    dragging = true;
-                }
-                break;
-            }
-            case SDL_MOUSEWHEEL: {
-                if(ev.wheel.y != 0) {
                     int x = 0;
                     int y = 0;
                     SDL_GetMouseState(&x, &y);
-                    std::cout << "Scrolling! Mouse pos: (" << x << ", " << y << ')' << std::endl;
+
+                    old_x = x;
+                    old_y = y;
+                    dragging = true;
                 }
                 break;
             }
@@ -198,10 +250,60 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
                 }
                 break;
             }
+            case SDL_MOUSEWHEEL: {
+                if(ev.wheel.y != 0) {
+                    int x = 0;
+                    int y = 0;
+                    SDL_GetMouseState(&x, &y);
+
+                    double dx = (x - width / 2) / zoom - offset_x;           // NOLINT
+                    double dy = (height - y - height / 2) / zoom - offset_y; // NOLINT
+
+                    offset_x = -dx;
+                    offset_y = -dy;
+
+                    constexpr double scroll_factor = 1.2;
+                    if(ev.wheel.y < 0) {
+                        zoom /= scroll_factor;
+                    }
+                    else {
+                        zoom *= scroll_factor;
+                    }
+
+                    dx = (x - width / 2) / zoom;           // NOLINT
+                    dy = (height - y - height / 2) / zoom; // NOLINT
+
+                    offset_x += dx;
+                    offset_y += dy;
+
+                    glUniform1f(glGetUniformLocation(shader, "zoom"), zoom);
+                    glUniform2f(glGetUniformLocation(shader, "offset"), offset_x, offset_y);
+                }
+                break;
+            }
             case SDL_KEYDOWN: {
                 if(ev.key.keysym.sym == SDLK_ESCAPE) {
                     running = false;
                 }
+                else if(ev.key.keysym.sym == SDLK_c) {
+                    // reset
+                    itr = default_itr;
+                    zoom = default_zoom;
+                    offset_x = default_offset_x;
+                    offset_y = default_offset_y;
+
+                    glUniform1f(glGetUniformLocation(shader, "zoom"), zoom);
+                    glUniform2f(glGetUniformLocation(shader, "offset"), offset_x, offset_y);
+                }
+                else if(ev.key.keysym.sym == SDLK_q) {
+                    itr += itr_adder;
+                }
+                else if(ev.key.keysym.sym == SDLK_e) {
+                    (itr > itr_threshold) ? itr -= itr_adder : itr = itr_adder;
+                }
+
+                glUniform1i(glGetUniformLocation(shader, "itr"), itr);
+
                 break;
             }
             case SDL_QUIT: {
@@ -214,12 +316,19 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
             }
         }
 
-        int mouse_x = 0;
-        int mouse_y = 0;
-
         if(dragging) {
+            int mouse_x = 0;
+            int mouse_y = 0;
+
             SDL_GetMouseState(&mouse_x, &mouse_y);
-            std::cout << "Dragging mouse at (" << mouse_x << ", " << mouse_y << ')' << std::endl;
+
+            offset_x += (mouse_x - old_x) / zoom;
+            offset_y += (old_y - mouse_y) / zoom;
+
+            old_x = mouse_x;
+            old_y = mouse_y;
+
+            glUniform2f(glGetUniformLocation(shader, "offset"), offset_x, offset_y);
         }
 
         glClear(GL_COLOR_BUFFER_BIT);
