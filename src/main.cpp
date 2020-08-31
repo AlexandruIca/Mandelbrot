@@ -82,6 +82,20 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
     constexpr int default_width = 1280;
     constexpr int default_height = 720;
 
+    /*
+    constexpr int default_itr = 200;
+    int itr = default_itr;
+
+    constexpr double default_zoom = 100.0;
+    double zoom = default_zoom;
+
+    constexpr double default_offset_x = 0.0;
+    double offset_x = default_offset_x;
+
+    constexpr double default_offset_y = 0.0;
+    double offset_y = default_offset_y;
+    */
+
     assert(SDL_Init(SDL_INIT_VIDEO) == 0, "Couldn't initialize SDL");
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -133,6 +147,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
     )";
 
     auto const shader = create_program(desc);
+    glUseProgram(shader);
 
     unsigned int vao = 0;
     glGenVertexArrays(1, &vao);
@@ -145,12 +160,12 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
-
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glClearColor(0.0F, 0.0F, 0.0F, 1.0F);
 
     bool running = true;
+    bool dragging = false;
 
     while(running) {
         SDL_Event ev;
@@ -159,6 +174,18 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
             case SDL_WINDOWEVENT: {
                 if(ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                     glViewport(0, 0, ev.window.data1, ev.window.data2);
+                }
+                break;
+            }
+            case SDL_MOUSEBUTTONDOWN: {
+                if(ev.button.button == SDL_BUTTON_LEFT) {
+                    dragging = true;
+                }
+                break;
+            }
+            case SDL_MOUSEBUTTONUP: {
+                if(ev.button.button == SDL_BUTTON_LEFT) {
+                    dragging = false;
                 }
                 break;
             }
@@ -178,9 +205,16 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
             }
         }
 
+        int mouse_x = 0;
+        int mouse_y = 0;
+
+        if(dragging) {
+            SDL_GetMouseState(&mouse_x, &mouse_y);
+            std::cout << "Dragging mouse at (" << mouse_x << ", " << mouse_y << ')' << std::endl;
+        }
+
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(shader);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 
         SDL_GL_SwapWindow(window);
@@ -188,6 +222,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
 
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
+    glDeleteProgram(shader);
 
     SDL_GL_DeleteContext(ctx);
     SDL_DestroyRenderer(renderer);
