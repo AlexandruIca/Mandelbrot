@@ -1,3 +1,7 @@
+///
+/// Special thanks to: https://github.com/gendestry/Mandelbrot
+///
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
