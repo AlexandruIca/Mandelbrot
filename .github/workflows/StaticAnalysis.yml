@@ -72,7 +72,7 @@ jobs:
               conan install .. --build sdl2 -s compiler.libcxx=libstdc++11
 
               export CC=clang-${CLANG_VER}
-              export CXX=clang-${CLANG_VER}
+              export CXX=clang++-${CLANG_VER}
 
               cmake -G"Ninja" -DCMAKE_BUILD_TYPE=Release ..
               mv compile_commands.json ..
