@@ -79,7 +79,7 @@ jobs:
               cpack -G ZIP
 
         - name: Deploy
-          uses: johnwbyrd/update-release@v1
+          uses: johnwbyrd/update-release@v1.0.0
           with:
               token: ${{ secrets.GITHUB_TOKEN }} 
               files: build/Mandelbrot-1.0-Linux.zip
