@@ -4,6 +4,9 @@
 # Mandelbrot fractal
 ![Mandelbrot](./media/Sample.gif)
 
+# Download
+For linux you can download the binary [here](https://github.com/AlexandruIca/Mandelbrot/releases/tag/refs%2Fheads%2Fmaster).
+
 # How to build
 Install [conan](https://conan.io/downloads.html) and [CMake](https://cmake.org/download/). After that:
 ```sh
