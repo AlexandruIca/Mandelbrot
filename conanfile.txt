@@ -4,3 +4,7 @@ sdl2/2.0.12@bincrafters/stable
 
 [generators]
 cmake_find_package
+
+[options]
+glad:shared=False
+sdl2:shared=False
