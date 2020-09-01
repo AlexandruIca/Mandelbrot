@@ -110,7 +110,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    SDL_Window* window = SDL_CreateWindow("Mandlebrot",
+    SDL_Window* window = SDL_CreateWindow("Mandelbrot",
                                           SDL_WINDOWPOS_CENTERED,
                                           SDL_WINDOWPOS_CENTERED,
                                           default_width,
@@ -157,7 +157,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
     float n = 0.0;
     float threshold = 100.0;
 
-    float mandlebrot(vec2 c) {
+    float mandelbrot(vec2 c) {
         vec2 z = vec2(0.0, 0.0);
 
         for(int i = 0; i < itr; ++i) {
@@ -186,7 +186,7 @@ auto main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) noexcept -> 
 
     void main() {
         vec2 coord = gl_FragCoord.xy;
-        float t = mandlebrot(((coord - screen_size / 2) / zoom) - offset);
+        float t = mandelbrot(((coord - screen_size / 2) / zoom) - offset);
 
         out_color = map_to_color(t);
     }
