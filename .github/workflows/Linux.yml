@@ -1,0 +1,97 @@
+name: Linux
+
+on:
+    push:
+        branches: [ master, github-actions]
+
+jobs:
+    build:
+        env:
+            GCC_VER: 10
+
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v2
+
+        - name: Cache conan packages
+          id: cache-conan
+          uses: actions/cache@v2
+          with:
+              path: /home/alex/.conan/data/
+              key: ${{ runner.os }}-conan
+
+        - name: Install dev tools
+          run: |
+              sudo apt install -y \
+                gcc-${GCC_VER} \
+                g++-${GCC_VER} \
+                cmake \
+                libgl1-mesa-dev \
+                libxcb-icccm4-dev \
+                libxcb-image0-dev \
+                libxcb-keysyms1-dev \
+                libxcb-render-util0-dev \
+                libxcb-xinerama0-dev \
+                libxcb-xkb-dev \
+                ninja-build \
+                xkb-data \
+                xorg-dev
+
+        - name: Check versions
+          run: |
+              cmake --version
+              ninja --version
+              gcc-${GCC_VER} --version
+
+        - uses: actions/setup-python@v2
+          with:
+              python-version: '3.x'
+
+        - name: Install dependencies
+          if: steps.cache-conan.outputs.cache-hit != 'true'
+          run: |
+              mkdir build && cd build
+              conan remote add bincrafters "https://api.bintray.com/conan/bincrafters/public-conan"
+              conan install .. --build sdl2 -s compiler.libcxx=libstdc++11
+              ls -al
+
+        - name: Build project
+          run: |
+              mkdir -p build && cd build
+
+              conan remote add bincrafters -f "https://api.bintray.com/conan/bincrafters/public-conan"
+              conan install .. --build sdl2 -s compiler.libcxx=libstdc++11
+
+              export CC=gcc-${GCC_VER}
+              export CXX=g++-${GCC_VER}
+
+              cmake -G"Ninja" -DCMAKE_BUILD_TYPE=Release ..
+              cmake --build .
+
+        - name: Package binary
+          run: |
+              cd build/
+              cpack -G ZIP
+
+        - name: Create Release
+          id: create_release
+          uses: actions/create-release@latest
+          env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+              tag_name: ${{ github.ref }}
+              release_name: Release ${{ github.ref }}
+              draft: false
+              prerelease: false
+
+        - name: Deploy
+          id: upload-release-asset
+          uses: actions/upload-release-asset@v1
+          env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: build/Mandelbrot-1.0-Linux.zip
+              asset_name: Mandelbrot.zip
+              asset_content_type: application/zip
