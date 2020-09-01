@@ -1,0 +1,91 @@
+name: StaticAnalysis
+
+on:
+    push:
+        branches: [ master, github-actions]
+
+jobs:
+    build:
+        env:
+            CLANG_VER: 10
+
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v2
+
+        - name: Cache conan packages
+          id: cache-conan
+          uses: actions/cache@v2
+          with:
+              path: /home/alex/.conan/data/
+              key: ${{ runner.os }}-conan
+
+        - name: Install dev tools
+          run: |
+              sudo apt install -y \
+                clang-${CLANG_VER} \
+                clang-format-${CLANG_VER} \
+                clang-tidy-${CLANG_VER} \
+                cmake \
+                libgl1-mesa-dev \
+                libxcb-icccm4-dev \
+                libxcb-image0-dev \
+                libxcb-keysyms1-dev \
+                libxcb-render-util0-dev \
+                libxcb-xinerama0-dev \
+                libxcb-xkb-dev \
+                ninja-build \
+                xkb-data \
+                xorg-dev
+
+        - name: Check versions
+          run: |
+              cmake --version
+              ninja --version
+              clang-${CLANG_VER} --version
+              clang-format-${CLANG_VER} --version
+              clang-tidy-${CLANG_VER} --version
+
+        - uses: actions/setup-python@v2
+          with:
+              python-version: '3.x'
+
+        - name: Install conan and cmake-format
+          run: |
+              pip3 install conan cmake-format
+              python3 -m pip install pyyaml
+
+        - name: Install dependencies
+          if: steps.cache-conan.outputs.cache-hit != 'true'
+          run: |
+              mkdir build && cd build
+              conan remote add bincrafters "https://api.bintray.com/conan/bincrafters/public-conan"
+              conan install .. --build sdl2 -s compiler.libcxx=libstdc++11
+              ls -al
+
+        - name: Build project
+          run: |
+              mkdir -p build && cd build
+
+              conan remote add bincrafters -f "https://api.bintray.com/conan/bincrafters/public-conan"
+              conan install .. --build sdl2 -s compiler.libcxx=libstdc++11
+
+              export CC=clang-${CLANG_VER}
+              export CXX=clang-${CLANG_VER}
+
+              cmake -G"Ninja" -DCMAKE_BUILD_TYPE=Release ..
+              mv compile_commands.json ..
+              cmake --build .
+
+        - name: Run cmake-format
+          run: |
+              ./scripts/check-cmake-format.sh
+
+        - name: Run clang-format
+          run: |
+              CLANG_FORMAT_PATH=/usr/bin/clang-format-${CLANG_VER} ./scripts/clang-format.sh
+
+        - name: Run clang-tidy
+          run: |
+              CLANG_TIDY_PATH=/usr/bin/clang-tidy-${CLANG_VER} ./scripts/clang-tidy.sh
