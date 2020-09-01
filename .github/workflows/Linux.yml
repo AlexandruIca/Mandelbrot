@@ -70,7 +70,7 @@ jobs:
               export CC=gcc-${GCC_VER}
               export CXX=g++-${GCC_VER}
 
-              cmake -G"Ninja" -DCMAKE_BUILD_TYPE=Release ..
+              cmake -G"Ninja" -DCMAKE_BUILD_TYPE=Release -DWARNINGS_AS_ERRORS=OFF ..
               cmake --build .
 
         - name: Package binary
