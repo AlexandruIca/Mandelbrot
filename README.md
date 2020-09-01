@@ -1,4 +1,5 @@
 ![StaticAnalysis](https://github.com/AlexandruIca/Mandelbrot/workflows/StaticAnalysis/badge.svg)
+![Linux](https://github.com/AlexandruIca/Mandelbrot/workflows/Linux/badge.svg)
 
 # Mandelbrot fractal
 ![Mandelbrot](./media/Sample.gif)
