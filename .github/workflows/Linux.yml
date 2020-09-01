@@ -48,6 +48,10 @@ jobs:
           with:
               python-version: '3.x'
 
+        - name: Install conan
+          run: |
+              pip3 install conan
+
         - name: Install dependencies
           if: steps.cache-conan.outputs.cache-hit != 'true'
           run: |
